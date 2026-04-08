@@ -1,13 +1,13 @@
 @extends('layouts.app')
 
-@section('title', 'Student Dashboard')
+@section('title', ucfirst($user->role) . ' Dashboard')
 
 @section('content')
     <div class="max-w-6xl mx-auto p-6">
         <div class="bg-white rounded-3xl shadow-xl p-8 mb-6">
             <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
-                    <h1 class="text-4xl font-bold text-slate-900">Student Dashboard</h1>
+                    <h1 class="text-4xl font-bold text-slate-900">{{ ucfirst($user->role) }} Dashboard</h1>
                     <p class="text-slate-500 mt-2">Welcome back, {{ $user->name }}. Track attendance, submit leave, and manage your tasks.</p>
                 </div>
             </div>
@@ -30,7 +30,7 @@
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             <div class="bg-white rounded-3xl shadow p-6">
                 <p class="text-sm text-slate-500">Role</p>
-                <p class="mt-3 text-2xl font-bold text-slate-900">Student</p>
+                <p class="mt-3 text-2xl font-bold text-slate-900">{{ ucfirst($user->role) }}</p>
             </div>
             <div class="bg-white rounded-3xl shadow p-6">
                 <p class="text-sm text-slate-500">Today's Attendance</p>

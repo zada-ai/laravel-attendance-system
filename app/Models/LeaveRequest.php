@@ -11,6 +11,7 @@ class LeaveRequest extends Model
 
     protected $fillable = [
         'user_id',
+        'leave_type_id',
         'start_date',
         'end_date',
         'reason',
@@ -26,5 +27,20 @@ class LeaveRequest extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function leaveType()
+    {
+        return $this->belongsTo(LeaveType::class);
+    }
+
+    public function canBeViewedBy(User $user): bool
+    {
+        return $user->isAdmin() || $user->isHr() || $user->id === $this->user_id;
+    }
+
+    public function canBeApprovedBy(User $user): bool
+    {
+        return $user->hasPermission('approve-leave');
     }
 }

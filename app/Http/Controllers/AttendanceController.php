@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AttendanceSummary;
 use App\Models\LeaveRequest;
 use App\Services\AttendanceAutoMarker;
 use App\Services\WhatsAppNotifier;
@@ -45,6 +46,8 @@ class AttendanceController extends Controller
 
     public function store(Request $request, WhatsAppNotifier $notifier)
     {
+        $this->authorizePermission('mark-attendance');
+
         $user = Auth::user();
 
         if ($user->attendances()->whereDate('date', now())->exists()) {
@@ -83,6 +86,47 @@ class AttendanceController extends Controller
 
         $notifier->sendUser($user, 'Your attendance has been marked for today.');
 
+        $this->updateAttendanceSummary($user);
+
         return back()->with('success', 'Attendance marked for today.');
+    }
+
+    protected function updateAttendanceSummary($user)
+    {
+        $start = now()->startOfMonth();
+        $end = now()->endOfMonth();
+
+        $presentCount = $user->attendances()
+            ->whereBetween('date', [$start, $end])
+            ->where('status', 'present')
+            ->count();
+
+        $absentCount = $user->attendances()
+            ->whereBetween('date', [$start, $end])
+            ->where('status', 'absent')
+            ->count();
+
+        $leaveCount = $user->attendances()
+            ->whereBetween('date', [$start, $end])
+            ->where('status', 'leave')
+            ->count();
+
+        $totalDays = $presentCount + $absentCount + $leaveCount;
+
+        AttendanceSummary::updateOrCreate(
+            [
+                'user_id' => $user->id,
+                'period_start' => $start->toDateString(),
+                'period_end' => $end->toDateString(),
+            ],
+            [
+                'present_count' => $presentCount,
+                'absent_count' => $absentCount,
+                'leave_count' => $leaveCount,
+                'total_days' => $totalDays,
+                'grade' => $user->attendanceGrade($presentCount),
+                'remarks' => '',
+            ]
+        );
     }
 }

@@ -23,4 +23,14 @@ class Attendance extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function canBeEditedBy(User $user): bool
+    {
+        return $user->isAdmin();
+    }
+
+    public function canBeDeletedBy(User $user): bool
+    {
+        return $user->isAdmin();
+    }
 }
