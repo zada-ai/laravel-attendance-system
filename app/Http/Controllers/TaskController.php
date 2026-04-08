@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Task;
+use App\Models\TaskSubmission;
 use App\Models\User;
 use App\Services\WhatsAppNotifier;
 use Illuminate\Http\Request;
@@ -64,6 +65,8 @@ class TaskController extends Controller
 
     public function respond(Request $request, Task $task, WhatsAppNotifier $notifier)
     {
+        $this->authorizePermission('submit-task');
+
         $user = Auth::user();
 
         if ($user->id !== $task->user_id) {
@@ -79,16 +82,19 @@ class TaskController extends Controller
             'response_file' => ['nullable', 'file', 'max:5120'],
         ]);
 
-        $updateData = [
+        $submissionData = [
+            'task_id' => $task->id,
+            'user_id' => $user->id,
             'response' => $request->response,
-            'status' => 'submitted',
+            'status' => 'pending',
         ];
 
         if ($request->hasFile('response_file')) {
-            $updateData['response_file_path'] = $request->file('response_file')->store('task_responses', 'public');
+            $submissionData['response_file_path'] = $request->file('response_file')->store('task_responses', 'public');
         }
 
-        $task->update($updateData);
+        TaskSubmission::create($submissionData);
+        $task->update(['status' => 'submitted']);
 
         $notifier->sendUser(
             $task->assignedBy,
@@ -109,12 +115,21 @@ class TaskController extends Controller
             'feedback' => ['nullable', 'string', 'max:1000'],
         ]);
 
+        $submission = $task->submissions()->latest()->first();
+
+        if ($submission) {
+            $submission->update([
+                'status' => $request->status,
+                'feedback' => $request->feedback,
+            ]);
+        }
+
         $task->update([
             'status' => $request->status,
             'feedback' => $request->feedback,
         ]);
 
-        $notifier->sendUser($task->user, "Your task '{$task->title}' has been {$task->status}. Feedback: {$task->feedback}");
+        $notifier->sendUser($task->user, "Your task '{$task->title}' has been {$task->status}. Feedback: {$request->feedback}");
 
         return back()->with('success', 'Task status updated.');
     }
@@ -131,8 +146,16 @@ class TaskController extends Controller
             return Storage::disk('public')->download($task->task_file_path);
         }
 
-        if ($type === 'response' && $task->response_file_path) {
-            return Storage::disk('public')->download($task->response_file_path);
+        if ($type === 'response') {
+            $submission = $task->submissions()->latest()->first();
+
+            if ($submission && $submission->response_file_path) {
+                return Storage::disk('public')->download($submission->response_file_path);
+            }
+
+            if ($task->response_file_path) {
+                return Storage::disk('public')->download($task->response_file_path);
+            }
         }
 
         abort(404);

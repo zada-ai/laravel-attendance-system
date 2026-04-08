@@ -28,7 +28,10 @@ class LeaveRequestController extends Controller
 
     public function store(Request $request, WhatsAppNotifier $notifier)
     {
+        $this->authorizePermission('submit-leave');
+
         $request->validate([
+            'leave_type_id' => ['nullable', 'exists:leave_types,id'],
             'start_date' => ['required', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'reason' => ['required', 'string', 'max:1000'],
@@ -37,6 +40,7 @@ class LeaveRequestController extends Controller
         $user = Auth::user();
 
         $leaveRequest = $user->leaveRequests()->create([
+            'leave_type_id' => $request->leave_type_id,
             'start_date' => $request->start_date,
             'end_date' => $request->end_date,
             'reason' => $request->reason,
@@ -55,9 +59,7 @@ class LeaveRequestController extends Controller
 
     public function update(Request $request, LeaveRequest $leaveRequest, WhatsAppNotifier $notifier)
     {
-        if (Auth::user()->role !== 'admin') {
-            abort(403);
-        }
+        $this->authorizePermission('approve-leave');
 
         $request->validate([
             'status' => ['required', Rule::in(['pending', 'approved', 'rejected'])],

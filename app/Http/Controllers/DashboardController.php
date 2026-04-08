@@ -13,7 +13,8 @@ class DashboardController extends Controller
 {
     public function index(AttendanceAutoMarker $autoMarker)
     {
-        $user = Auth::user();
+        // Fetch fresh user data from database to bypass caching
+        $user = User::find(Auth::id());
 
         if ($user->role !== 'admin') {
             $autoMarker->markMissingAttendanceForUser($user);

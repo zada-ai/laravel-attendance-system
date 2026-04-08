@@ -10,4 +10,11 @@ use Illuminate\Foundation\Validation\ValidatesRequests;
 abstract class Controller extends BaseController
 {
     use AuthorizesRequests, DispatchesJobs, ValidatesRequests;
+
+    protected function authorizePermission(string $permission): void
+    {
+        if (! auth()->check() || ! auth()->user()->hasPermission($permission)) {
+            abort(403);
+        }
+    }
 }

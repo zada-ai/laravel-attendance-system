@@ -5,32 +5,27 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Attendance extends Model
+class WhatsAppNotification extends Model
 {
     use HasFactory;
 
+    protected $table = 'whatsapp_notifications';
+
     protected $fillable = [
         'user_id',
-        'date',
+        'whatsapp_number',
+        'message',
         'status',
+        'failure_reason',
+        'sent_at',
     ];
 
     protected $casts = [
-        'date' => 'date',
+        'sent_at' => 'datetime',
     ];
 
     public function user()
     {
         return $this->belongsTo(User::class);
-    }
-
-    public function canBeEditedBy(User $user): bool
-    {
-        return $user->isAdmin();
-    }
-
-    public function canBeDeletedBy(User $user): bool
-    {
-        return $user->isAdmin();
     }
 }

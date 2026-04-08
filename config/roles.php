@@ -17,8 +17,24 @@ return [
 
     'permissions' => [
         'admin' => ['*'],
-        'student' => ['mark-attendance', 'submit-leave', 'view-tasks', 'view-reports'],
-        'teacher' => ['mark-attendance', 'assign-task', 'approve-leave', 'approve-task', 'view-reports'],
-        'hr' => ['view-reports', 'approve-leave', 'manage-students'],
+        'student' => [
+            'mark-attendance',
+            'submit-leave',
+            'view-attendance',
+            'view-tasks',
+            'submit-task',
+            'view-reports',
+        ],
+        'teacher' => [
+            'mark-attendance',
+            'assign-task',
+            'approve-leave',
+            'approve-task',
+            'view-reports',
+        ],
+        'hr' => [
+            'approve-leave',
+            'view-reports',
+        ],
     ],
 ];

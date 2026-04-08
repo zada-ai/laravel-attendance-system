@@ -15,7 +15,22 @@ class AdminController extends Controller
     public function __construct()
     {
         $this->middleware(function ($request, $next) {
-            if (! auth()->check() || auth()->user()->role !== 'admin') {
+            $user = auth()->user();
+            $action = $request->route()->getActionMethod();
+
+            if (! $user) {
+                abort(403);
+            }
+
+            if ($action === 'reports' && $user->hasPermission('view-reports')) {
+                return $next($request);
+            }
+
+            if ($action === 'attendance' && $user->hasPermission('view-attendance')) {
+                return $next($request);
+            }
+
+            if (! $user->hasRole('admin')) {
                 abort(403);
             }
 
@@ -48,16 +63,40 @@ class AdminController extends Controller
 
         $user->update(['role' => $request->role]);
 
+        // Clear Spatie permission cache
+        app('cache')->forget('spatie.permission.cache');
+
+        // Refresh the user instance from database
+        $user->refresh();
+
+        // Update auth session if updating current user's role
+        if (auth()->id() === $user->id) {
+            auth()->setUser($user);
+        }
+
         return back()->with('success', 'User role updated.');
     }
 
     public function attendance(Request $request)
     {
-        $users = User::where('role', 'student')->get();
+        $user = auth()->user();
+
+        if ($user->hasRole('admin')) {
+            $users = User::orderBy('name')->get();
+        } elseif ($user->hasRole('hr')) {
+            $users = User::whereIn('role', ['student', 'hr'])->orderBy('name')->get();
+        } elseif ($user->hasRole('teacher')) {
+            $users = User::where('role', 'student')->orderBy('name')->get();
+        } else {
+            abort(403);
+        }
+
         $attendances = Attendance::with('user')
             ->when($request->user_id, fn($query) => $query->where('user_id', $request->user_id))
             ->when($request->from, fn($query) => $query->whereDate('date', '>=', $request->from))
             ->when($request->to, fn($query) => $query->whereDate('date', '<=', $request->to))
+            ->when(! $user->hasRole('admin') && $user->hasRole('hr'), fn($query) => $query->whereIn('user_id', User::whereIn('role', ['student', 'hr'])->pluck('id')))
+            ->when(! $user->hasRole('admin') && $user->hasRole('teacher'), fn($query) => $query->whereIn('user_id', User::where('role', 'student')->pluck('id')))
             ->latest('date')
             ->paginate(15);
 
